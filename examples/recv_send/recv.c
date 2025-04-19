@@ -13,6 +13,9 @@
 
 int gDpdkPortId = 0;
 
+// ethernet 端口配置
+// 如果数据包长度超过 max_rx_pkt_len，
+// 网卡会直接丢弃该数据包，并可能增加硬件统计计数器（如丢弃包计数器
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {.max_rx_pkt_len = RTE_ETHER_MAX_LEN }
 };
@@ -36,7 +39,15 @@ static void ng_init_port(struct rte_mempool *mbuf_pool) {
 	rte_eth_dev_configure(gDpdkPortId, num_rx_queues, num_tx_queues, &port_conf);
 
     // 启动rx队列
-    // 这里的0表示使用第一个队列，128表示每个队列的大小
+    // 这里的0表示使用第一个队列，128表示每个队列的最多接受的包的数量
+    /*
+    第一个参数是网卡设备的 ID（gDpdkPortId）。
+    第二个参数是队列索引，这里为 0，表示第一个接收队列。
+    第三个参数是队列的大小（128）。
+    第四个参数是网卡设备所在的 NUMA 节点 ID，使用 rte_eth_dev_socket_id 获取。
+    第五个参数是队列的配置结构体，这里传入 NULL 表示使用默认配置。
+    第六个参数是内存池（mbuf_pool），用于存储接收到的数据包
+    */
 	if (rte_eth_rx_queue_setup(gDpdkPortId, 0 , 128, 
 		rte_eth_dev_socket_id(gDpdkPortId),NULL, mbuf_pool) < 0) {
 
