@@ -429,6 +429,7 @@ static int pkt_process(void *arg) {
 
 	while (1) {
 
+		// 从网卡读取数据
 		struct rte_mbuf *mbufs[BURST_SIZE];
 		unsigned num_recvd = rte_ring_mc_dequeue_burst(ring->in, (void**)mbufs, BURST_SIZE, NULL);
 		
@@ -524,6 +525,7 @@ static int pkt_process(void *arg) {
 
 #if ENABLE_TCP_APP
 
+			// TCP 处理
 			if (iphdr->next_proto_id == IPPROTO_TCP) {
 				printf("ng_tcp_process\n");
 				ng_tcp_process(mbufs[i]);
@@ -1095,6 +1097,7 @@ typedef enum _NG_TCP_STATUS {
 } NG_TCP_STATUS;
 
 
+// tcp的sock
 struct ng_tcp_stream { // tcb control block
 
 	int fd; //
@@ -1278,6 +1281,8 @@ static int ng_tcp_handle_established(struct ng_tcp_stream *stream, struct rte_tc
 	if (tcphdr->tcp_flags & RTE_TCP_SYN_FLAG) {
 		//
 	} 
+
+	// PSH类型
 	if (tcphdr->tcp_flags & RTE_TCP_PSH_FLAG) {
 
 		// recv buffer
@@ -1289,6 +1294,7 @@ static int ng_tcp_handle_established(struct ng_tcp_stream *stream, struct rte_tc
 		rfragment->sport = ntohs(tcphdr->src_port);
 
 		uint8_t hdrlen = tcphdr->data_off >> 4;
+		// payload数据
 		int payloadlen = tcplen - hdrlen * 4;
 		if (payloadlen > 0) {
 			
@@ -1306,9 +1312,10 @@ static int ng_tcp_handle_established(struct ng_tcp_stream *stream, struct rte_tc
 
 			printf("tcp : %s\n", rfragment->data);
 		}
+		// 加入上层recv buffer
 		rte_ring_mp_enqueue(stream->rcvbuf, rfragment);
 
-		// ack pkt
+		// ack pkt 回复ACK报文
 		struct ng_tcp_fragment *ackfrag = rte_malloc("ng_tcp_fragment", sizeof(struct ng_tcp_fragment), 0);
 		if (ackfrag == NULL) return -1;
 		memset(ackfrag, 0, sizeof(struct ng_tcp_fragment));
@@ -1334,7 +1341,8 @@ static int ng_tcp_handle_established(struct ng_tcp_stream *stream, struct rte_tc
 		ackfrag->hdrlen_off = 0x50;
 		ackfrag->data = NULL;
 		ackfrag->length = 0;
-		
+		// 此处放入sock的sndbuf中
+		// ACK 应该是立即发送的 这里存在问题
 		rte_ring_mp_enqueue(stream->sndbuf, ackfrag);
 
 		// echo pkt
@@ -1406,6 +1414,8 @@ static int ng_tcp_process(struct rte_mbuf *tcpmbuf) {
 		if (stream == NULL) return -2;
 	}
 
+	// sock的状态设置
+	// 模拟内核协议炸的tcp_rcv_state_process
 	switch (stream->status) {
 
 		case NG_TCP_STATUS_CLOSED: //client 
@@ -1424,6 +1434,7 @@ static int ng_tcp_process(struct rte_mbuf *tcpmbuf) {
 
 		case NG_TCP_STATUS_ESTABLISHED: { // server | client
 
+			// establish 处理
 			int tcplen = ntohs(iphdr->total_length) - sizeof(struct rte_ipv4_hdr);
 			
 			ng_tcp_handle_established(stream, tcphdr, tcplen);
