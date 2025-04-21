@@ -679,6 +679,7 @@ static int pkt_process(void *arg) {
 				
 #if 1 // arp table
 				
+					//数据包进来后 更新arp表
 				ng_arp_entry_insert(iphdr->src_addr, ehdr->s_addr.addr_bytes);
 				
 #endif
@@ -694,7 +695,8 @@ static int pkt_process(void *arg) {
 					ng_tcp_process(mbufs[i]);
 					
 				} else {
-
+					// 扔给KNI 内核协议栈进行处理
+					// 会释放mbuf
 					rte_kni_tx_burst(global_kni, mbufs, num_recvd);
 					
 					printf("tcp/udp --> rte_kni_handle_request\n");
@@ -713,7 +715,7 @@ static int pkt_process(void *arg) {
 
 			
 		}
-
+		// kni的ops action处理函数
 		rte_kni_handle_request(global_kni);
 
 #if ENABLE_UDP_APP
