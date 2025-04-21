@@ -373,6 +373,7 @@ static void ng_init_port(struct rte_mempool *mbuf_pool) {
 	}
 
 #if ENABLE_KNI_APP
+	// 开启混杂模式
 	rte_eth_promiscuous_enable(gDpdkPortId);
 #endif
 }
@@ -2190,6 +2191,10 @@ static int tcp_server_entry(__attribute__((unused))  void *arg)  {
 // rte_kni_handle_request
 static int ng_config_network_if(uint16_t port_id, uint8_t if_up) {
 
+	/**
+	 * rte_eth_devices 是 DPDK 内部维护的一个全局数组，
+	 * 它保存了dpdk中所有以太网设备（ethdev）的状态和操作函数
+	 */
 	if (!rte_eth_dev_is_valid_port(port_id)) {
 		return -EINVAL;
 	}
@@ -2217,12 +2222,14 @@ static struct rte_kni *ng_alloc_kni(struct rte_mempool *mbuf_pool) {
 
 	struct rte_kni *kni_hanlder = NULL;
 	
+	// kni的配置
 	struct rte_kni_conf conf;
 	memset(&conf, 0, sizeof(conf));
-
+	//名称
 	snprintf(conf.name, RTE_KNI_NAMESIZE, "vEth%u", gDpdkPortId);
-	conf.group_id = gDpdkPortId;
+	conf.group_id = gDpdkPortId; //组id
 	conf.mbuf_size = MAX_PACKET_SIZE;
+	// 获取mac MTU
 	rte_eth_macaddr_get(gDpdkPortId, (struct rte_ether_addr *)conf.mac_addr);
 	rte_eth_dev_get_mtu(gDpdkPortId, &conf.mtu);
 
@@ -2239,9 +2246,10 @@ static struct rte_kni *ng_alloc_kni(struct rte_mempool *mbuf_pool) {
 	memset(&ops, 0, sizeof(ops));
 
 	ops.port_id = gDpdkPortId;
+	// 网卡的配置函数
 	ops.config_network_if = ng_config_network_if;
 	
-
+	// 申请网卡
 	kni_hanlder = rte_kni_alloc(mbuf_pool, &conf, &ops);	
 	if (!kni_hanlder) {
 		rte_exit(EXIT_FAILURE, "Failed to create kni for port : %d\n", gDpdkPortId);
@@ -2270,11 +2278,14 @@ int main(int argc, char *argv[]) {
 
 #if ENABLE_KNI_APP
 
+	// kni init 
+	// 参数无用
 	if (-1 == rte_kni_init(gDpdkPortId)) {
 		rte_exit(EXIT_FAILURE, "kni init failed\n");
 	}
+	// 物理网卡的配置
 	ng_init_port(mbuf_pool);
-	// kni_alloc
+	// kni 网卡的配置
 	global_kni = ng_alloc_kni(mbuf_pool);
 
 #else	
