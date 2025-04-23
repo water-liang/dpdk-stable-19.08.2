@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 	uint32_t next = 0;
 	
 	
-	
+	// 便利hash表
 	while(rte_hash_iterate(hash, (const void **)&key, &value, &next) >= 0) {
 
 		if (value != NULL) {
