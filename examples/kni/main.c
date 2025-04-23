@@ -727,7 +727,7 @@ monitor_all_ports_link_status(void *arg)
 			if ((ports_mask & (1 << portid)) == 0)
 				continue;
 			memset(&link, 0, sizeof(link));
-			rte_eth_link_get_nowait(portid, &link);
+			rte_eth_link_get_nowait(portid, &link); //判断网卡的状态
 			for (i = 0; i < p[portid]->nb_kni; i++) {
 				prev = rte_kni_update_link(p[portid]->kni[i],
 						link.link_status);
