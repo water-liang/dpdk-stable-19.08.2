@@ -200,6 +200,7 @@ igbuio_pci_irqhandler(int irq, void *dev_id)
 	    !pci_check_and_mask_intx(udev->pdev))
 		return IRQ_NONE;
 
+		//UIO通知
 	uio_event_notify(info);
 
 	/* Message signal mode, no share IRQ and automasked */
@@ -278,6 +279,7 @@ igbuio_pci_enable_interrupts(struct rte_uio_pci_dev *udev)
 		err = -EINVAL;
 	}
 
+	// 注册中断
 	if (udev->info.irq != UIO_IRQ_NONE)
 		err = request_irq(udev->info.irq, igbuio_pci_irqhandler,
 				  udev->info.irq_flags, udev->info.name,
@@ -493,6 +495,7 @@ igbuio_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	pci_set_master(dev);
 
 	/* remap IO memory */
+	// pci网卡的物理空间以及io空间暴露给uio设备
 	err = igbuio_setup_bars(dev, &udev->info);
 	if (err != 0)
 		goto fail_release_iomem;
