@@ -379,7 +379,7 @@ igbuio_pci_setup_iomem(struct pci_dev *dev, struct uio_info *info,
 	info->mem[n].addr = addr;
 	info->mem[n].internal_addr = internal_addr;
 	info->mem[n].size = len;
-	info->mem[n].memtype = UIO_MEM_PHYS;
+	info->mem[n].memtype = UIO_MEM_PHYS;// 映射设备的物理内存
 	return 0;
 }
 
@@ -514,6 +514,7 @@ igbuio_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	}
 
 	/* fill uio infos */
+	// 设置uio设备的属性
 	udev->info.name = "igb_uio";
 	udev->info.version = "0.1";
 	udev->info.irqcontrol = igbuio_pci_irqcontrol;
