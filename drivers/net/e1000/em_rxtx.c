@@ -86,11 +86,11 @@ struct em_tx_entry {
  */
 struct em_rx_queue {
 	struct rte_mempool  *mb_pool;   /**< mbuf pool to populate RX ring. */
-	volatile struct e1000_rx_desc *rx_ring; /**< RX ring virtual address. */
+	volatile struct e1000_rx_desc *rx_ring; /**< RX ring virtual address.存储mbuf的物理地址 */
 	uint64_t            rx_ring_phys_addr; /**< RX ring DMA address. */
 	volatile uint32_t   *rdt_reg_addr; /**< RDT register address. */
 	volatile uint32_t   *rdh_reg_addr; /**< RDH register address. */
-	struct em_rx_entry *sw_ring;   /**< address of RX software ring. */
+	struct em_rx_entry *sw_ring;   /**< address of RX software ring. 存储mbuf的虚拟地址*/
 	struct rte_mbuf *pkt_first_seg; /**< First segment of current packet. */
 	struct rte_mbuf *pkt_last_seg;  /**< Last segment of current packet. */
 	uint64_t	    offloads;   /**< Offloads of DEV_RX_OFFLOAD_* */

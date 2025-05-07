@@ -499,7 +499,10 @@ igbuio_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	err = igbuio_setup_bars(dev, &udev->info);
 	if (err != 0)
 		goto fail_release_iomem;
+	// 网卡设置为dma模式， 用户态pmd驱动就可以轮询的从dma直接接收网卡报文，
+	// 或者将报文交给dma来发送
 
+	// 设置可以访问的地址范围0-64地址空间
 	/* set 64-bit DMA mask */
 	err = pci_set_dma_mask(dev,  DMA_BIT_MASK(64));
 	if (err != 0) {
@@ -514,21 +517,25 @@ igbuio_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	}
 
 	/* fill uio infos */
+	// 会创建一个uio设备文件/dev/uioX
 	// 设置uio设备的属性
 	udev->info.name = "igb_uio";
 	udev->info.version = "0.1";
-	udev->info.irqcontrol = igbuio_pci_irqcontrol;
-	udev->info.open = igbuio_pci_open;
+	udev->info.irqcontrol = igbuio_pci_irqcontrol;// 应用层开关中断时被调用，用于是否开始中断
+	udev->info.open = igbuio_pci_open; // 通过过uio的file_operations -> open
 	udev->info.release = igbuio_pci_release;
 	udev->info.priv = udev;
 	udev->pdev = dev;
 	atomic_set(&udev->refcnt, 0);
 
+	// 为写入sysfs的文件作准备
+	// 创建一个sysfs属性组
 	err = sysfs_create_group(&dev->dev.kobj, &dev_attr_grp);
 	if (err != 0)
 		goto fail_release_iomem;
 
 	/* register uio driver */
+	// 注册一个uio设备
 	err = uio_register_device(&dev->dev, &udev->info);
 	if (err != 0)
 		goto fail_remove_group;
@@ -540,6 +547,7 @@ igbuio_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	 * the iommu identity mapping if kernel boots with iommu=pt.
 	 * Note this is not a problem if no IOMMU at all.
 	 */
+	// 做一次DMA映射
 	map_addr = dma_alloc_coherent(&dev->dev, 1024, &map_dma_addr,
 			GFP_KERNEL);
 	if (map_addr)
@@ -633,6 +641,7 @@ igbuio_pci_init_module(void)
 	if (ret < 0)
 		return ret;
 
+		// 内核注册pci驱动
 	return pci_register_driver(&igbuio_pci_driver);
 }
 
