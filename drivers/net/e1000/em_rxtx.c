@@ -1441,6 +1441,8 @@ eth_em_rx_queue_setup(struct rte_eth_dev *dev,
 	}
 
 	/* Allocate RX ring for max possible mumber of hardware descriptors. */
+
+	// 为tx ring分配DMA地址
 	rsize = sizeof(rxq->rx_ring[0]) * E1000_MAX_RING_DESC;
 	rz = rte_eth_dma_zone_reserve(dev, "rx_ring", queue_idx, rsize,
 				      RTE_CACHE_LINE_SIZE, socket_id);

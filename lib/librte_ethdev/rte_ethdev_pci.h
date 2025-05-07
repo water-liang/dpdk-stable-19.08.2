@@ -107,6 +107,9 @@ rte_eth_dev_pci_allocate(struct rte_pci_device *dev, size_t private_data_size)
 
 	name = dev->device.name;
 
+	// 处理器类型
+
+	// master进程
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		eth_dev = rte_eth_dev_allocate(name);
 		if (!eth_dev)
@@ -122,6 +125,8 @@ rte_eth_dev_pci_allocate(struct rte_pci_device *dev, size_t private_data_size)
 			}
 		}
 	} else {
+		// 从进程
+		// attach eth_dev
 		eth_dev = rte_eth_dev_attach_secondary(name);
 		if (!eth_dev)
 			return NULL;

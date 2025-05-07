@@ -389,6 +389,7 @@ s32 e1000_setup_init_funcs(struct e1000_hw *hw, bool init_device)
 	 * Init function pointers to generic implementations. We do this first
 	 * allowing a driver module to override it afterward.
 	 */
+	// 网卡相关的函数指针
 	e1000_init_mac_ops_generic(hw);
 	e1000_init_phy_ops_generic(hw);
 	e1000_init_nvm_ops_generic(hw);

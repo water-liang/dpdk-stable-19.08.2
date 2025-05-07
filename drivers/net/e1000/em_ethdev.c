@@ -160,7 +160,7 @@ static const struct rte_pci_id pci_id_em_map[] = {
 
 static const struct eth_dev_ops eth_em_ops = {
 	.dev_configure        = eth_em_configure,
-	.dev_start            = eth_em_start,
+	.dev_start            = eth_em_start,//启动网卡
 	.dev_stop             = eth_em_stop,
 	.dev_close            = eth_em_close,
 	.promiscuous_enable   = eth_em_promiscuous_enable,
@@ -174,13 +174,13 @@ static const struct eth_dev_ops eth_em_ops = {
 	.mtu_set              = eth_em_mtu_set,
 	.vlan_filter_set      = eth_em_vlan_filter_set,
 	.vlan_offload_set     = eth_em_vlan_offload_set,
-	.rx_queue_setup       = eth_em_rx_queue_setup,
+	.rx_queue_setup       = eth_em_rx_queue_setup,//创建rx队列
 	.rx_queue_release     = eth_em_rx_queue_release,
 	.rx_queue_count       = eth_em_rx_queue_count,
 	.rx_descriptor_done   = eth_em_rx_descriptor_done,
 	.rx_descriptor_status = eth_em_rx_descriptor_status,
 	.tx_descriptor_status = eth_em_tx_descriptor_status,
-	.tx_queue_setup       = eth_em_tx_queue_setup,
+	.tx_queue_setup       = eth_em_tx_queue_setup,//创建tx队列
 	.tx_queue_release     = eth_em_tx_queue_release,
 	.rx_queue_intr_enable = eth_em_rx_queue_intr_enable,
 	.rx_queue_intr_disable = eth_em_rx_queue_intr_disable,
@@ -249,6 +249,7 @@ eth_em_dev_init(struct rte_eth_dev *eth_dev)
 	struct e1000_vfta * shadow_vfta =
 		E1000_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
 
+	//注册一系列函数
 	eth_dev->dev_ops = &eth_em_ops;
 	eth_dev->rx_pkt_burst = (eth_rx_burst_t)&eth_em_recv_pkts;
 	eth_dev->tx_pkt_burst = (eth_tx_burst_t)&eth_em_xmit_pkts;
@@ -265,7 +266,7 @@ eth_em_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	rte_eth_copy_pci_info(eth_dev, pci_dev);
-
+	// 从PCI设备中获取网卡的经过dpdk 映射后的虚拟地址
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
 	hw->device_id = pci_dev->id.device_id;
 	adapter->stopped = 0;
@@ -274,6 +275,7 @@ eth_em_dev_init(struct rte_eth_dev *eth_dev)
 	if (eth_em_dev_is_ich8(hw))
 		hw->flash_address = (void *)pci_dev->mem_resource[1].addr;
 
+		//网卡初始化指针赋值  硬件初始化配置
 	if (e1000_setup_init_funcs(hw, TRUE) != E1000_SUCCESS ||
 			em_hw_init(hw) != 0) {
 		PMD_INIT_LOG(ERR, "port_id %d vendorID=0x%x deviceID=0x%x: "
@@ -304,6 +306,7 @@ eth_em_dev_init(struct rte_eth_dev *eth_dev)
 		     eth_dev->data->port_id, pci_dev->id.vendor_id,
 		     pci_dev->id.device_id);
 
+	//注册中断函数
 	rte_intr_callback_register(intr_handle,
 				   eth_em_interrupt_handler, eth_dev);
 
@@ -341,6 +344,7 @@ eth_em_dev_uninit(struct rte_eth_dev *eth_dev)
 static int eth_em_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct rte_pci_device *pci_dev)
 {
+	// 创建一个eth_dev设备，并初始化
 	return rte_eth_dev_pci_generic_probe(pci_dev,
 		sizeof(struct e1000_adapter), eth_em_dev_init);
 }
@@ -1823,11 +1827,15 @@ eth_em_set_mc_addr_list(struct rte_eth_dev *dev,
 	return 0;
 }
 
+// 注册DPDK PMD驱动
 RTE_PMD_REGISTER_PCI(net_e1000_em, rte_em_pmd);
+// 注册pci table pci设备表
 RTE_PMD_REGISTER_PCI_TABLE(net_e1000_em, pci_id_em_map);
+// 依赖的内核模块
 RTE_PMD_REGISTER_KMOD_DEP(net_e1000_em, "* igb_uio | uio_pci_generic | vfio-pci");
 
 /* see e1000_logs.c */
+// 初始化函数log
 RTE_INIT(igb_init_log)
 {
 	e1000_igb_init_log();
