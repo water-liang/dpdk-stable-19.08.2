@@ -111,6 +111,7 @@ rte_eth_dev_pci_allocate(struct rte_pci_device *dev, size_t private_data_size)
 
 	// master进程
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		// 加入 dpdk的rte_eth_devices 表中
 		eth_dev = rte_eth_dev_allocate(name);
 		if (!eth_dev)
 			return NULL;

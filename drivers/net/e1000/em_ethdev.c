@@ -344,7 +344,7 @@ eth_em_dev_uninit(struct rte_eth_dev *eth_dev)
 static int eth_em_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct rte_pci_device *pci_dev)
 {
-	// 创建一个eth_dev设备，并初始化
+	// 向pci注册一个eth_dev设备，并初始化
 	return rte_eth_dev_pci_generic_probe(pci_dev,
 		sizeof(struct e1000_adapter), eth_em_dev_init);
 }
@@ -355,9 +355,9 @@ static int eth_em_pci_remove(struct rte_pci_device *pci_dev)
 }
 
 static struct rte_pci_driver rte_em_pmd = {
-	.id_table = pci_id_em_map,
-	.drv_flags = RTE_PCI_DRV_NEED_MAPPING | RTE_PCI_DRV_INTR_LSC,
-	.probe = eth_em_pci_probe,
+	.id_table = pci_id_em_map, // 配置设备和驱动程序
+	.drv_flags = RTE_PCI_DRV_NEED_MAPPING | RTE_PCI_DRV_INTR_LSC, //地址需要映射
+	.probe = eth_em_pci_probe, // 匹配成功后，probe函数
 	.remove = eth_em_pci_remove,
 };
 
@@ -604,8 +604,10 @@ eth_em_start(struct rte_eth_dev *dev)
 		em_rxq_intr_enable(hw);
 	}
 
+	// 发送队列初始化
 	eth_em_tx_init(dev);
 
+	// rx队列初始化
 	ret = eth_em_rx_init(dev);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "Unable to initialize RX hardware");

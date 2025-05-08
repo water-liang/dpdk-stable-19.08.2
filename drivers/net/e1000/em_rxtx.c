@@ -1304,8 +1304,8 @@ eth_em_tx_queue_setup(struct rte_eth_dev *dev,
 	txq->port_id = dev->data->port_id;
 
 	txq->tdt_reg_addr = E1000_PCI_REG_ADDR(hw, E1000_TDT(queue_idx));
-	txq->tx_ring_phys_addr = tz->iova;
-	txq->tx_ring = (struct e1000_data_desc *) tz->addr;
+	txq->tx_ring_phys_addr = tz->iova; // DMA映射的物理地址
+	txq->tx_ring = (struct e1000_data_desc *) tz->addr; // DMA映射的虚拟地址
 
 	PMD_INIT_LOG(DEBUG, "sw_ring=%p hw_ring=%p dma_addr=0x%"PRIx64,
 		     txq->sw_ring, txq->tx_ring, txq->tx_ring_phys_addr);
@@ -1442,7 +1442,7 @@ eth_em_rx_queue_setup(struct rte_eth_dev *dev,
 
 	/* Allocate RX ring for max possible mumber of hardware descriptors. */
 
-	// 为tx ring分配DMA地址
+	// 为tx ring分配DMA映射需要的内存
 	rsize = sizeof(rxq->rx_ring[0]) * E1000_MAX_RING_DESC;
 	rz = rte_eth_dma_zone_reserve(dev, "rx_ring", queue_idx, rsize,
 				      RTE_CACHE_LINE_SIZE, socket_id);
@@ -1455,6 +1455,7 @@ eth_em_rx_queue_setup(struct rte_eth_dev *dev,
 		return -ENOMEM;
 
 	/* Allocate software ring. */
+	// sw_ring 队列
 	if ((rxq->sw_ring = rte_zmalloc("rxq->sw_ring",
 			sizeof (rxq->sw_ring[0]) * nb_desc,
 			RTE_CACHE_LINE_SIZE)) == NULL) {
@@ -1713,6 +1714,7 @@ em_alloc_rx_queue_mbufs(struct em_rx_queue *rxq)
 			return -ENOMEM;
 		}
 
+		// 物理地址
 		dma_addr =
 			rte_cpu_to_le_64(rte_mbuf_data_iova_default(mbuf));
 
@@ -1721,7 +1723,7 @@ em_alloc_rx_queue_mbufs(struct em_rx_queue *rxq)
 
 		rxd = &rxq->rx_ring[i];
 		rxd->buffer_addr = dma_addr;
-		rxe[i].mbuf = mbuf;
+		rxe[i].mbuf = mbuf; //虚拟地址
 	}
 
 	return 0;

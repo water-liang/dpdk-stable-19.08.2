@@ -257,6 +257,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 
 	strlcpy(dev_info.name, conf->name, RTE_KNI_NAMESIZE);
 
+	// kni_reserve_mz 申请连续的物理内存，并用其作为各个 ring。
 	ret = kni_reserve_mz(kni);
 	if (ret < 0)
 		goto mz_fail;
@@ -300,6 +301,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 	kni->group_id = conf->group_id;
 	kni->mbuf_size = conf->mbuf_size;
 
+	// 调用 ioctl 创建 kni 设备
 	ret = ioctl(kni_fd, RTE_KNI_IOCTL_CREATE, &dev_info);
 	if (ret < 0)
 		goto ioctl_fail;
