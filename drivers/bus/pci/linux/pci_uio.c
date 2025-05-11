@@ -233,6 +233,7 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 	snprintf(devname, sizeof(devname), "/dev/uio%u", uio_num);
 
 	/* save fd if in primary process */
+	// 得到了中断的fd
 	dev->intr_handle.fd = open(devname, O_RDWR);
 	if (dev->intr_handle.fd < 0) {
 		RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",

@@ -188,6 +188,8 @@ rte_pci_probe_one_driver(struct rte_pci_driver *dr,
 
 	if (!already_probed && (dr->drv_flags & RTE_PCI_DRV_NEED_MAPPING)) {
 		/* map resources for devices that use igb_uio */
+
+		// 映射设备空间
 		ret = rte_pci_map_device(dev);
 		if (ret != 0) {
 			dev->driver = NULL;

@@ -62,6 +62,7 @@ pci_get_kernel_driver_by_path(const char *filename, char *dri_name,
 }
 
 /* Map pci device */
+// UIO 设备文件的映射
 int
 rte_pci_map_device(struct rte_pci_device *dev)
 {
