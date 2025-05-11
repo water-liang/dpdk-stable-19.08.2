@@ -383,6 +383,7 @@ hugepage_info_init(void)
 	DIR *dir;
 	struct dirent *dirent;
 
+	// 读取遍历/sys/kernel/mm/hugepages中每个名称以"hugepages-"开头的目录
 	dir = opendir(sys_dir_path);
 	if (dir == NULL) {
 		RTE_LOG(ERR, EAL,
@@ -405,6 +406,7 @@ hugepage_info_init(void)
 		hpi->hugepage_sz =
 			rte_str_to_size(&dirent->d_name[dirent_start_len]);
 
+			// 检查挂载点
 		/* first, check if we have a mountpoint */
 		if (get_hugepage_dir(hpi->hugepage_sz,
 			hpi->hugedir, sizeof(hpi->hugedir)) < 0) {
@@ -448,7 +450,7 @@ hugepage_info_init(void)
 		/* clear out the hugepages dir from unused pages */
 		if (clear_hugedir(hpi->hugedir) == -1)
 			break;
-
+		//计算页面数量
 		calc_num_pages(hpi, dirent);
 
 		num_sizes++;
@@ -492,6 +494,7 @@ eal_hugepage_info_init(void)
 	struct hugepage_info *hpi, *tmp_hpi;
 	unsigned int i;
 
+	// 初始化大页信息
 	if (hugepage_info_init() < 0)
 		return -1;
 
@@ -501,6 +504,8 @@ eal_hugepage_info_init(void)
 
 	hpi = &internal_config.hugepage_info[0];
 
+	//共享文件模式
+	// /var/run/dpdk/rte目录下的hugepage_info文件
 	tmp_hpi = create_shared_memory(eal_hugepage_info_path(),
 			sizeof(internal_config.hugepage_info));
 	if (tmp_hpi == NULL) {
@@ -508,16 +513,19 @@ eal_hugepage_info_init(void)
 		return -1;
 	}
 
+	// 放入信息
 	memcpy(tmp_hpi, hpi, sizeof(internal_config.hugepage_info));
 
 	/* we've copied file descriptors along with everything else, but they
 	 * will be invalid in secondary process, so overwrite them
 	 */
+	// 文件描述符 lock_descriptor 是主进程打开的，secondary process 无法继承（
 	for (i = 0; i < RTE_DIM(internal_config.hugepage_info); i++) {
 		struct hugepage_info *tmp = &tmp_hpi[i];
 		tmp->lock_descriptor = -1;
 	}
 
+	//取消本地映射
 	if (munmap(tmp_hpi, sizeof(internal_config.hugepage_info)) < 0) {
 		RTE_LOG(ERR, EAL, "Failed to unmap shared memory!\n");
 		return -1;

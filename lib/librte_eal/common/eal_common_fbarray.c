@@ -742,8 +742,10 @@ rte_fbarray_init(struct rte_fbarray *arr, const char *name, unsigned int len,
 	}
 
 	/* calculate our memory limits */
+	// 需要确定空间大小
 	mmap_len = calc_data_size(page_sz, elt_sz, len);
 
+	// 确定一个虚拟地址data作为rte_memzone结构体的存储地址
 	data = eal_get_virtual_area(NULL, &mmap_len, page_sz, 0, 0);
 	if (data == NULL) {
 		free(ma);
@@ -764,6 +766,7 @@ rte_fbarray_init(struct rte_fbarray *arr, const char *name, unsigned int len,
 			goto fail;
 		}
 	} else {
+		// /var/run/dpdk/rte
 		eal_get_fbarray_path(path, sizeof(path), name);
 
 		/*
@@ -794,6 +797,7 @@ rte_fbarray_init(struct rte_fbarray *arr, const char *name, unsigned int len,
 			goto fail;
 		}
 
+		//文件通过mmap映射到虚拟地址data
 		if (resize_and_map(fd, data, mmap_len))
 			goto fail;
 	}

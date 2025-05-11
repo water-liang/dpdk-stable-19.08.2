@@ -1193,6 +1193,7 @@ eal_parse_common_option(int opt, const char *optarg,
 		w_used = 1;
 		break;
 	/* coremask */
+	// 指定哪些CPU核是可以使用的，以及设置第一个核为MASTER。
 	case 'c': {
 		int lcore_indexes[RTE_MAX_LCORE];
 

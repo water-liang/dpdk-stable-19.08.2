@@ -262,6 +262,7 @@ rte_eal_timer_init(void)
 
 	eal_timer_source = EAL_TIMER_TSC;
 
+	// 设定计时器的刷新频率
 	set_tsc_freq();
 	check_tsc_flags();
 	return 0;

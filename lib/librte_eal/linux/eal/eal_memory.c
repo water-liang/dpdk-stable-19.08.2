@@ -2298,6 +2298,7 @@ memseg_primary_init(void)
 		goto out;
 	}
 
+	// 确定每种memtype的segment数量
 	/* go through all mem types and create segment lists */
 	msl_idx = 0;
 	for (cur_type = 0; cur_type < n_memtypes; cur_type++) {
@@ -2349,6 +2350,8 @@ memseg_primary_init(void)
 				"n_segs:%i socket_id:%i hugepage_sz:%" PRIu64 "\n",
 			n_seglists, n_segs, socket_id, pagesz);
 
+			// 为每种memtype创建segment list
+			//
 		/* create all segment lists */
 		for (cur_seglist = 0; cur_seglist < n_seglists; cur_seglist++) {
 			if (msl_idx >= RTE_MAX_MEMSEG_LISTS) {
@@ -2359,10 +2362,12 @@ memseg_primary_init(void)
 			}
 			msl = &mcfg->memsegs[msl_idx++];
 
+			// mmap映射
 			if (alloc_memseg_list(msl, pagesz, n_segs,
 					socket_id, cur_seglist))
 				goto out;
 
+				// 获取虚拟地址
 			if (alloc_va_space(msl)) {
 				RTE_LOG(ERR, EAL, "Cannot allocate VA space for memseg list\n");
 				goto out;
@@ -2435,6 +2440,7 @@ rte_eal_memseg_init(void)
 	}
 #endif
 
+	//memseg初始化
 	return rte_eal_process_type() == RTE_PROC_PRIMARY ?
 #ifndef RTE_ARCH_64
 			memseg_primary_init_32() :

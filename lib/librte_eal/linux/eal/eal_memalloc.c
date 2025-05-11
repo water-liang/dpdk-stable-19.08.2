@@ -1598,6 +1598,10 @@ eal_memalloc_init(void)
 		}
 	}
 
+	// 初始化文件描述符列表数组fd_list，每个memseg list对应一个数组项，
+	// 数组项中会指向一块内存，用于存储文件描述符，这里的文件描述符即为匿名内存共享文件的描述符。
+
+	// 每个segment 都有一个mmap的fd
 	/* initialize all of the fd lists */
 	if (rte_memseg_list_walk(fd_list_create_walk, NULL))
 		return -1;

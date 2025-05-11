@@ -591,6 +591,7 @@ rte_mp_channel_init(void)
 		return -1;
 	}
 
+	// 在/var/run/dpdk/rte目录下生成一个文件，名称为mp_socket_*
 	/* create filter path */
 	create_socket_path("*", path, sizeof(path));
 	strlcpy(mp_filter, basename(path), sizeof(mp_filter));
@@ -607,18 +608,21 @@ rte_mp_channel_init(void)
 		return -1;
 	}
 
+	// LOCK_EX 表示加排他锁（写锁），阻止其他进程获取该文件的任何锁
 	if (flock(dir_fd, LOCK_EX)) {
 		RTE_LOG(ERR, EAL, "failed to lock %s: %s\n",
 			mp_dir_path, strerror(errno));
 		close(dir_fd);
 		return -1;
 	}
-
+	// 如果进程是primary，那么通信文件为/var/run/dpdk/rte/mp_socket，
+	// 如果是secondary，通信文件为/var/run/dpdk/rte/mp_socket_${pid}_${timestamp}
 	if (open_socket_fd() < 0) {
 		close(dir_fd);
 		return -1;
 	}
 
+	// 该处理函数无限循环接收mp_fd代表的socket发来的信息并处理之
 	if (rte_ctrl_thread_create(&mp_handle_tid, "rte_mp_handle",
 			NULL, mp_handle, NULL) < 0) {
 		RTE_LOG(ERR, EAL, "failed to create mp thead: %s\n",

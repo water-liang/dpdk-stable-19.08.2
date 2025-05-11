@@ -76,8 +76,8 @@ struct internal_config {
 	char *hugepage_dir;         /**< specific hugetlbfs directory to use */
 	char *user_mbuf_pool_ops_name;
 			/**< user defined mbuf pool ops name */
-	unsigned num_hugepage_sizes;      /**< how many sizes on this system */
-	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES];
+	unsigned num_hugepage_sizes;      /**< how many sizes on this system  系统支持大页的type 数量 */
+	struct hugepage_info hugepage_info[MAX_HUGEPAGE_SIZES]; // 大页内存的信息
 	enum rte_iova_mode iova_mode ;    /**< Set IOVA mode on this system  */
 	rte_cpuset_t ctrl_cpuset;         /**< cpuset for ctrl threads */
 	volatile unsigned int init_complete;

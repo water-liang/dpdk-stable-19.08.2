@@ -94,6 +94,7 @@ static rte_spinlock_t intr_lock = RTE_SPINLOCK_INITIALIZER;
 static union intr_pipefds intr_pipe;
 
 /* interrupt sources list */
+// 中断处理函数链表
 static struct rte_intr_source_list intr_sources;
 
 /* interrupt handling thread */
@@ -847,6 +848,8 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 		 * if the pipe fd is ready to read, return out to
 		 * rebuild the wait list.
 		 */
+		//  如果intr_pipe.readfd有数据，说明intr_sources里有新注册的中断，
+		// 由上文提到的rte_intr_callback_register注册，注册完会向intr_pipe里写内容从而触发到此处。
 		if (events[n].data.fd == intr_pipe.readfd){
 			int r = read(intr_pipe.readfd, buf.charbuf,
 					sizeof(buf.charbuf));
@@ -868,6 +871,7 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 		rte_spinlock_unlock(&intr_lock);
 
 		/* set the length to be read dor different handle type */
+		//不同的中断类型，需要读取的数据长度不同，在此设置待读数据长度
 		switch (src->intr_handle.type) {
 		case RTE_INTR_HANDLE_UIO:
 		case RTE_INTR_HANDLE_UIO_INTX:
@@ -954,6 +958,7 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 				rte_spinlock_unlock(&intr_lock);
 
 				/* call the actual callback */
+				// 调用当前遍历到的中断处理函数，并传参进去
 				active_cb.cb_fn(active_cb.cb_arg);
 
 				/*get the lock back. */
@@ -961,11 +966,14 @@ eal_intr_process_interrupts(struct epoll_event *events, int nfds)
 			}
 		}
 		/* we done with that interrupt source, release it. */
+		 //本次中断处理流程结束，将active标志置0
 		src->active = 0;
 
 		rv = 0;
 
 		/* check if any callback are supposed to be removed */
+		// 遍历一遍当前rte_intr_source节点下注册的所有中断处理函数节点，
+		// 看下有没有需要被移除掉的函数节点
 		for (cb = TAILQ_FIRST(&src->callbacks); cb != NULL; cb = next) {
 			next = TAILQ_NEXT(cb, next);
 			if (cb->pending_delete) {
@@ -1027,8 +1035,8 @@ eal_intr_handle_interrupts(int pfd, unsigned totalfds)
 		else if (nfds == 0)
 			continue;
 		/* epoll_wait has at least one fd ready to read */
-		if (eal_intr_process_interrupts(events, nfds) < 0)
-			return;
+		if (eal_intr_process_interrupts(events, nfds) < 0) //epoll_wait等到了至少一个可读的fd，即到来了至少一个的中断
+			return; //如果小于0，说明intr_sources链表有变动，需要返回上层函数eal_intr_thread_main，在eal_intr_thread_main里更新信息
 	}
 }
 
@@ -1077,6 +1085,7 @@ eal_intr_thread_main(__rte_unused void *arg)
 
 		rte_spinlock_lock(&intr_lock);
 
+		// 中断处理的fd
 		TAILQ_FOREACH(src, &intr_sources, next) {
 			if (src->callbacks.tqh_first == NULL)
 				continue; /* skip those with no callbacks */
@@ -1097,6 +1106,7 @@ eal_intr_thread_main(__rte_unused void *arg)
 		}
 		rte_spinlock_unlock(&intr_lock);
 		/* serve the interrupt */
+		//处理中断
 		eal_intr_handle_interrupts(pfd, numfds);
 
 		/**
@@ -1111,7 +1121,8 @@ int
 rte_eal_intr_init(void)
 {
 	int ret = 0;
-
+	// 首先初始化intr_sources链表。
+	// 所有UIO设备的中断都挂在这个链表上，中断处理线程通过遍历这个链表，来执行设备的中断
 	/* init the global interrupt source head */
 	TAILQ_INIT(&intr_sources);
 

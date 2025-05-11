@@ -170,6 +170,7 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 		const pthread_attr_t *attr,
 		void *(*start_routine)(void *), void *arg)
 {
+	//可通过CPU_SET、CPU_ZERO设置
 	rte_cpuset_t *cpuset = &internal_config.ctrl_cpuset;
 	struct rte_thread_ctrl_params *params;
 	int ret;
@@ -181,6 +182,10 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	params->start_routine = start_routine;
 	params->arg = arg;
 
+	//pthread_barrier_init设置需等待两个线程，
+	//结合pthread_barrier_wait和pthread_barrier_destroy使用
+
+	// 线程屏障
 	pthread_barrier_init(&params->configured, NULL, 2);
 
 	ret = pthread_create(thread, attr, rte_thread_init, (void *)params);
@@ -190,16 +195,18 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	}
 
 	if (name != NULL) {
+		// 给线程设置名称，实际是通过pthread_setname_np设置的，可以在进程内设置和读取其他线程名称
 		ret = rte_thread_setname(*thread, name);
 		if (ret < 0)
 			RTE_LOG(DEBUG, EAL,
 				"Cannot set name for ctrl thread\n");
 	}
-
+	//将此线程绑定到某个CPU上，具体CPU号由cpuset决定。
 	ret = pthread_setaffinity_np(*thread, sizeof(*cpuset), cpuset);
 	if (ret)
 		goto fail;
 
+		
 	ret = pthread_barrier_wait(&params->configured);
 	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
 		pthread_barrier_destroy(&params->configured);

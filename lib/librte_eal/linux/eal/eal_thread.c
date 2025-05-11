@@ -116,6 +116,7 @@ eal_thread_loop(__attribute__((unused)) void *arg)
 	RTE_PER_LCORE(_lcore_id) = lcore_id;
 
 	/* set CPU affinity */
+	// 设置cpu亲和性
 	if (eal_thread_set_affinity() < 0)
 		rte_panic("cannot set affinity\n");
 
@@ -149,6 +150,8 @@ eal_thread_loop(__attribute__((unused)) void *arg)
 			rte_panic("NULL function pointer\n");
 
 		/* call the function and store the return value */
+
+		// 执行函数处理
 		fct_arg = lcore_config[lcore_id].arg;
 		ret = lcore_config[lcore_id].f(fct_arg);
 		lcore_config[lcore_id].ret = ret;

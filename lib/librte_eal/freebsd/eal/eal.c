@@ -527,6 +527,7 @@ eal_parse_args(int argc, char **argv)
 			goto out;
 		}
 
+		// 分析参数
 		ret = eal_parse_common_option(opt, optarg, &internal_config);
 		/* common parser is not happy */
 		if (ret < 0) {
@@ -681,12 +682,14 @@ rte_eal_init(int argc, char **argv)
 	char thread_name[RTE_MAX_THREAD_NAME_LEN];
 
 	/* checks if the machine is adequate */
+	// 检测cpu的标识是否支持
 	if (!rte_cpu_is_supported()) {
 		rte_eal_init_alert("unsupported cpu type.");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
 
+	// 操作静态局部变量run_once确保函数只执行一次
 	if (!rte_atomic32_test_and_set(&run_once)) {
 		rte_eal_init_alert("already called initialization.");
 		rte_errno = EALREADY;
@@ -695,17 +698,20 @@ rte_eal_init(int argc, char **argv)
 
 	thread_id = pthread_self();
 
+	//初始化结构体struct internal_config
 	eal_reset_internal_config(&internal_config);
 
 	/* set log level as early as possible */
 	eal_log_level_parse(argc, argv);
 
+	// 读取host的cpu信息，并填充lcore_config	
 	if (rte_eal_cpu_init() < 0) {
 		rte_eal_init_alert("Cannot detect lcores.");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
 
+	// 分析参数
 	fctret = eal_parse_args(argc, argv);
 	if (fctret < 0) {
 		rte_eal_init_alert("Invalid 'command line' arguments.");
@@ -717,6 +723,7 @@ rte_eal_init(int argc, char **argv)
 	/* FreeBSD always uses legacy memory model */
 	internal_config.legacy_mem = true;
 
+	//插件机制，就是PMD动态库
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;

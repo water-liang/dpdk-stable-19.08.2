@@ -310,6 +310,8 @@ rte_eal_config_create(void)
 	void *rte_mem_cfg_addr;
 	int retval;
 
+	// shared memory config 文件的位置
+	// /var/run/dpdk/rte/config
 	const char *pathname = eal_runtime_config_path();
 
 	if (internal_config.no_shconf)
@@ -323,6 +325,7 @@ rte_eal_config_create(void)
 	else
 		rte_mem_cfg_addr = NULL;
 
+		// 文件未被锁定
 	if (mem_cfg_fd < 0){
 		mem_cfg_fd = open(pathname, O_RDWR | O_CREAT, 0600);
 		if (mem_cfg_fd < 0) {
@@ -341,6 +344,7 @@ rte_eal_config_create(void)
 		return -1;
 	}
 
+	// 加写锁
 	retval = fcntl(mem_cfg_fd, F_SETLK, &wr_lock);
 	if (retval < 0){
 		close(mem_cfg_fd);
@@ -350,6 +354,7 @@ rte_eal_config_create(void)
 		return -1;
 	}
 
+	// 映射共享内存的配置信息
 	rte_mem_cfg_addr = mmap(rte_mem_cfg_addr, sizeof(*rte_config.mem_config),
 				PROT_READ | PROT_WRITE, MAP_SHARED, mem_cfg_fd, 0);
 
@@ -422,6 +427,7 @@ rte_eal_config_reattach(void)
 	rte_mem_cfg_addr = (void *) (uintptr_t) rte_config.mem_config->mem_cfg_addr;
 
 	/* unmap original config */
+	// 关闭原始的映射
 	munmap(rte_config.mem_config, sizeof(struct rte_mem_config));
 
 	/* remap the config at proper address */
@@ -483,8 +489,10 @@ rte_config_init(void)
 
 	switch (rte_config.process_type){
 	case RTE_PROC_PRIMARY:
+	// 建立mem_config 共享内存配置
 		if (rte_eal_config_create() < 0)
 			return -1;
+			// 配置的参数进行赋值
 		eal_mcfg_update_from_internal();
 		break;
 	case RTE_PROC_SECONDARY:
@@ -1015,6 +1023,7 @@ rte_eal_init(int argc, char **argv)
 	/* set log level as early as possible */
 	eal_log_level_parse(argc, argv);
 
+	// 是要确定运行环境中node(socket), lcore, core的数量和他们之间的对应关系。
 	if (rte_eal_cpu_init() < 0) {
 		rte_eal_init_alert("Cannot detect lcores.");
 		rte_errno = ENOTSUP;
@@ -1029,29 +1038,35 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	// 插件机制，就是PMD动态库
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;
 		rte_atomic32_clear(&run_once);
 		return -1;
 	}
-
+	// bus的scan和probe还没有进行，先将用户对device的一些限制或者要求解析出来，
+	//这样后面做bus相关处理的时候就可以应用了
 	if (eal_option_device_parse()) {
 		rte_errno = ENODEV;
 		rte_atomic32_clear(&run_once);
 		return -1;
 	}
 
+	// 默认情况下执行PRIMARY的流程
+	// 建立mem_config 共享内存配置
 	if (rte_config_init() < 0) {
 		rte_eal_init_alert("Cannot init config");
 		return -1;
 	}
 
+	// 中断处理线程的初始化
 	if (rte_eal_intr_init() < 0) {
 		rte_eal_init_alert("Cannot init interrupt-handling thread");
 		return -1;
 	}
 
+	// timerfd_create创建文件描述符来通知定时器是否到期
 	if (rte_eal_alarm_init() < 0) {
 		rte_eal_init_alert("Cannot init alarm");
 		/* rte_eal_alarm_init sets rte_errno on failure. */
@@ -1061,6 +1076,7 @@ rte_eal_init(int argc, char **argv)
 	/* Put mp channel init before bus scan so that we can init the vdev
 	 * bus through mp channel in the secondary process before the bus scan.
 	 */
+	// 进程间通信的unix fd通道的初始化
 	if (rte_mp_channel_init() < 0 && rte_errno != ENOTSUP) {
 		rte_eal_init_alert("failed to init mp channel");
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
@@ -1069,12 +1085,14 @@ rte_eal_init(int argc, char **argv)
 		}
 	}
 
+	// 设备热插拔初始化
 	/* register multi-process action callbacks for hotplug */
 	if (eal_mp_dev_hotplug_init() < 0) {
 		rte_eal_init_alert("failed to register mp callback for hotplug");
 		return -1;
 	}
 
+	// 总线遍历设备
 	if (rte_bus_scan()) {
 		rte_eal_init_alert("Cannot scan the buses for devices");
 		rte_errno = ENODEV;
@@ -1082,8 +1100,13 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	// 检查是否允许直接物理地址访问
 	phys_addrs = rte_eal_using_phys_addrs() != 0;
 
+	// iova模式的处理
+	// 硬件设备是不能直接操作进程的虚拟地址空间的，他能够操作的是物理地址
+	// DPDK统一通过IOVA实现与硬件设备的数据交换，
+	// 但需要区分IOVA是寻址的是内存物理地址还是进程的虚拟地址的情况，这就分区出了iova_pa和iova_va两种情况。
 	/* if no EAL option "--iova-mode=<pa|va>", use bus IOVA scheme */
 	if (internal_config.iova_mode == RTE_IOVA_DC) {
 		/* autodetect the IOVA mapping mode */
@@ -1137,6 +1160,8 @@ rte_eal_init(int argc, char **argv)
 	RTE_LOG(INFO, EAL, "Selected IOVA mode '%s'\n",
 		rte_eal_iova_mode() == RTE_IOVA_PA ? "PA" : "VA");
 
+		// 大页内存初始化
+		// PRIMARY 初始化
 	if (internal_config.no_hugetlbfs == 0) {
 		/* rte_config isn't initialized yet */
 		ret = internal_config.process_type == RTE_PROC_PRIMARY ?
@@ -1166,6 +1191,7 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
+	// 日志初始化
 	if (rte_eal_log_init(logid, internal_config.syslog_facility) < 0) {
 		rte_eal_init_alert("Cannot init logging.");
 		rte_errno = ENOMEM;
@@ -1174,6 +1200,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 #ifdef VFIO_PRESENT
+	// VFIO初始化
 	if (rte_eal_vfio_setup() < 0) {
 		rte_eal_init_alert("Cannot init VFIO");
 		rte_errno = EAGAIN;
@@ -1185,12 +1212,14 @@ rte_eal_init(int argc, char **argv)
 	 * not present in primary processes, so to avoid any potential issues,
 	 * initialize memzones first.
 	 */
+	// 初始化的是rte_config中的mem_config下的memzones成员
 	if (rte_eal_memzone_init() < 0) {
 		rte_eal_init_alert("Cannot init memzone");
 		rte_errno = ENODEV;
 		return -1;
 	}
 
+	// 内存初始化
 	if (rte_eal_memory_init() < 0) {
 		rte_eal_init_alert("Cannot init memory");
 		rte_errno = ENOMEM;
@@ -1200,6 +1229,7 @@ rte_eal_init(int argc, char **argv)
 	/* the directories are locked during eal_hugepage_info_init */
 	eal_hugedirs_unlock();
 
+	// 内存堆初始化
 	if (rte_eal_malloc_heap_init() < 0) {
 		rte_eal_init_alert("Cannot init malloc heap");
 		rte_errno = ENODEV;
@@ -1212,14 +1242,17 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	// 初始化计时器
 	if (rte_eal_timer_init() < 0) {
 		rte_eal_init_alert("Cannot init HPET or TSC timers");
 		rte_errno = ENOTSUP;
 		return -1;
 	}
 
+	// 检查main_lcore所在socket上的内存配置
 	eal_check_mem_on_local_socket();
 
+	// 设置主线程的cpu亲和性
 	eal_thread_init_master(rte_config.master_lcore);
 
 	ret = eal_thread_dump_affinity(cpuset, sizeof(cpuset));
@@ -1228,12 +1261,14 @@ rte_eal_init(int argc, char **argv)
 		rte_config.master_lcore, (uintptr_t)thread_id, cpuset,
 		ret == 0 ? "" : "...");
 
+		// 为每个worker lcore启动线程
 	RTE_LCORE_FOREACH_SLAVE(i) {
 
 		/*
 		 * create communication pipes between master thread
 		 * and children
 		 */
+		// 创建连接管道
 		if (pipe(lcore_config[i].pipe_master2slave) < 0)
 			rte_panic("Cannot create pipe\n");
 		if (pipe(lcore_config[i].pipe_slave2master) < 0)
@@ -1247,6 +1282,7 @@ rte_eal_init(int argc, char **argv)
 		if (ret != 0)
 			rte_panic("Cannot create thread\n");
 
+			// 为线程设定名称
 		/* Set thread_name for aid in debugging. */
 		snprintf(thread_name, sizeof(thread_name),
 			"lcore-slave-%d", i);
@@ -1273,6 +1309,10 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	/* Probe all the buses and devices/drivers on them */
+	// 遍历所有总线，调用总线的probe方法
+	// 其中vdev类型的总线只调用一次。
+	// 以pci总线的probe为例，pci_probe()中，遍历总线上的每一个设备，去查找是否存在匹配的驱动，
+	// 如果所有设备都没有找到匹配的驱动，则返回错误。
 	if (rte_bus_probe()) {
 		rte_eal_init_alert("Cannot probe devices");
 		rte_errno = ENOTSUP;
@@ -1309,6 +1349,7 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	// 标记memconfig初始化完成
 	eal_mcfg_complete();
 
 	/* Call each registered callback, if enabled */

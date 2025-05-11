@@ -876,6 +876,7 @@ eth_igb_dev_init(struct rte_eth_dev *eth_dev)
 		     eth_dev->data->port_id, pci_dev->id.vendor_id,
 		     pci_dev->id.device_id);
 
+			 // 注册中断
 	rte_intr_callback_register(&pci_dev->intr_handle,
 				   eth_igb_interrupt_handler,
 				   (void *)eth_dev);

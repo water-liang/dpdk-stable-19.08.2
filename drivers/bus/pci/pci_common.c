@@ -671,10 +671,11 @@ rte_pci_get_iommu_class(void)
 	return iova_mode;
 }
 
+// 注册pci bus
 struct rte_pci_bus rte_pci_bus = {
 	.bus = {
-		.scan = rte_pci_scan,
-		.probe = rte_pci_probe,
+		.scan = rte_pci_scan,//扫描总线上的设备
+		.probe = rte_pci_probe,// 遍历 scan 发现的设备，如果设备和驱动匹配，调用驱动的 probe() 回调函数
 		.find_device = pci_find_device,
 		.plug = pci_plug,
 		.unplug = pci_unplug,

@@ -246,8 +246,8 @@ typedef enum rte_iova_mode (*rte_bus_get_iommu_class_t)(void);
 struct rte_bus {
 	TAILQ_ENTRY(rte_bus) next;   /**< Next bus object in linked list */
 	const char *name;            /**< Name of the bus */
-	rte_bus_scan_t scan;         /**< Scan for devices attached to bus */
-	rte_bus_probe_t probe;       /**< Probe devices on bus */
+	rte_bus_scan_t scan;         /**< Scan for devices attached to bus  用于查找并列出当前总线上所有可用的设备 */
+	rte_bus_probe_t probe;       /**< Probe devices on bus 为 scan 找到的设备匹配驱动，并进行初始化 */
 	rte_bus_find_device_t find_device; /**< Find a device on the bus */
 	rte_bus_plug_t plug;         /**< Probe single device for drivers */
 	rte_bus_unplug_t unplug;     /**< Remove single device from driver */

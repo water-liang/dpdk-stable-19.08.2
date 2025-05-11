@@ -13,6 +13,7 @@
 
 #include "eal_private.h"
 
+// bus list
 static struct rte_bus_list rte_bus_list =
 	TAILQ_HEAD_INITIALIZER(rte_bus_list);
 

@@ -59,6 +59,7 @@ static void eal_alarm_callback(void *arg);
 int
 rte_eal_alarm_init(void)
 {
+	// 在后续的操作中，intr_handle会注册到前面提到的intr_sources列表中。
 	intr_handle.type = RTE_INTR_HANDLE_ALARM;
 	/* create a timerfd file descriptor */
 	intr_handle.fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);

@@ -919,12 +919,16 @@ rte_eal_memory_init(void)
 	/* lock mem hotplug here, to prevent races while we init */
 	rte_mcfg_mem_read_lock();
 
+	// memseg 初始化,确定了segments
 	if (rte_eal_memseg_init() < 0)
 		goto fail;
 
+		// 处理内存分配
 	if (eal_memalloc_init() < 0)
 		goto fail;
 
+		// 初始化大页
+		// 分配大页
 	retval = rte_eal_process_type() == RTE_PROC_PRIMARY ?
 			rte_eal_hugepage_init() :
 			rte_eal_hugepage_attach();
